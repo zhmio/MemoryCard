@@ -10,5 +10,15 @@
 #define __MemoryCards__ScoreStratefy__
 
 #include <stdio.h>
+#include "ScoreStratefyBase.h"
+
+class ScoreStratefy: public ScoreStratefyBase {
+    ScoreStratefy();
+    
+private:
+    int _continuous;
+public:
+    virtual void execute(ScoreData *score, CardData *cardDataA, CardData *cardDataB);
+};
 
 #endif /* defined(__MemoryCards__ScoreStratefy__) */

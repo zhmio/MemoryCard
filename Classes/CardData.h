@@ -13,6 +13,7 @@ struct CardData {
     int number;
     int row;
     int column;
+    int flipCount;
 };
 
 

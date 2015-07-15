@@ -44,7 +44,7 @@ void Card::setBackImage(cocos2d::Node *var) {
     _backImage = var;
     _backImage->setCascadeOpacityEnabled(true);//设置子sprite随父sprite透明度变化
     _backImage->setVisible(true);
-    _backImage->setAnchorPoint(Vec2(0, 0));
+    //_backImage->setAnchorPoint(Vec2(0, 0));
     this->setContentSize(_backImage->getContentSize());
     addChild(_backImage);
 }
@@ -59,35 +59,50 @@ void Card::setFrontImage(cocos2d::Node *var) {
     _frontImage = var;
     _frontImage->setCascadeOpacityEnabled(true);
     _frontImage->setVisible(false);
-    _frontImage->setAnchorPoint(Vec2(0, 0));
+    //_frontImage->setAnchorPoint(Vec2(0, 0));
     addChild(_frontImage);
 }
 
 void Card::flipFromTo(cocos2d::Node *a, cocos2d::Node *b, const std::function<void()> &callback) {
-    if (a == nullptr || b == nullptr) {
+    if (nullptr == a || nullptr == b) {
         return;
     }
+    
+    //初始化属性
     
     a->stopAllActions();
     b->stopAllActions();
     
     a->setVisible(true);
-    a->setScaleX(1);
+    a->setScaleX(1.0f);
+    
     b->setVisible(false);
     b->setScaleX(0);
     
-    auto filpB = [a, b, callback](){
+    
+    //翻出B
+    
+    auto flipB = [a, b,callback](){
         a->setVisible(false);
         b->setVisible(true);
         
-        CallFunc* func = nullptr;
-        if (callback != nullptr) {
-            func = CallFunc::create(callback);
+        CallFunc* func=nullptr;
+        if (callback!=nullptr) {
+            func=CallFunc::create(callback);
         }
-        b->runAction(Sequence::create(ScaleTo::create(0.25, 1), func, NULL));
+        
+        b->runAction(Sequence::create(
+                                      ScaleTo::create(0.125f, 1.0f, 1.0f),
+                                      func,
+                                      NULL));
     };
     
-    a->runAction(Sequence::create(ScaleTo::create(0.25, 1), CallFunc::create(filpB), NULL));
+    //翻入A
+    
+    a->runAction(Sequence::create(
+                                  ScaleTo::create(0.125f, 0, 1.0f),
+                                  CallFunc::create(flipB)
+                                  , NULL));
 }
 
 void Card::flipToBack(const std::function<void()> &callback) {

@@ -44,6 +44,7 @@ bool HelloWorld::init()
     auto scale = visibleSize.height/levelSize.height;
     card->setScale(scale);
     this->addChild(card);
+    
     return true;
 }
 

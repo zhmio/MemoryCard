@@ -9,5 +9,10 @@
 #ifndef MemoryCards_ScoreData_h
 #define MemoryCards_ScoreData_h
 
+struct ScoreData {
+    int score;
+    int maxCount;
+    int energy;
+};
 
 #endif

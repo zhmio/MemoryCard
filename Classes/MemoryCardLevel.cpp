@@ -43,6 +43,7 @@ bool MemoryCardLevel::init(LevelData data) {
         return false;
     }
     _levelData = data;
+    _unfinishedCard = data.rows*data.columns;
     initCardLayout();
     initEventTouch();
     return true;
@@ -59,20 +60,24 @@ void MemoryCardLevel::initCardLayout() {
     
     int number = 0;
     int nums = _levelData.rows*_levelData.columns;
+    Vector<Card*> cardList(nums);
+    for (;number < nums; ++number) {
+        Card *card = dynamic_cast<Card*>(CardFactory::createCard(backId, number/2));
+        cardList.pushBack(card);
+    }
     float cardSize = 0;
     for (int i = 0; i < nums; ++i) {
         //实例化卡片
-        Card *card = dynamic_cast<Card*>(CardFactory::createCard(backId, number/2));
+        int index = CCRANDOM_0_1()*cardList.size();
+        auto card = cardList.at(index);
+        cardList.eraseObject(card);
         card->getCardData()->row = i/2;
         card->getCardData()->column = i%2;
         
         cardSize = card->getContentSize().width;
-        card->setAnchorPoint(Vec2(0.5, 0.5));
         card->setPosition(Vec2(i%2*cardSize + cardSize/2, i/2*cardSize + cardSize/2));
         this->addChild(card);
         _table[i/2][i%2] = card;
-        
-        number++;
     }
     //Card *card = dynamic_cast<Card*>(CardFactory::createCard(backId, number));
     //this->addChild(card);
@@ -91,7 +96,7 @@ void MemoryCardLevel::initEventTouch() {
         }
         return false;
     };
-    listener->onTouchEnded = [=](Touch *touch, Event *event) {
+    listener->onTouchEnded = [&](Touch *touch, Event *event) {
         auto point = this->convertToNodeSpace(touch->getLocation());
         for (int i = 0; i < _levelData.rows; ++i) {
             auto rows = _table[i];
@@ -112,18 +117,38 @@ void MemoryCardLevel::initEventTouch() {
                         _selCardA = card;
                         break;
                     } else {
-                        card->flipToFront();
+                        //第二次选择
+                        _selCardB = card;
                         if (card->getCardData()->number == _selCardA->getCardData()->number) {
-                            _selCardB = card;
-                            auto fade = FadeOut::create(2);
-                            //_selCardA->runAction(Sequence::create(fade, NULL));
-                            _selCardB->runAction(fade);
+                            auto cardA = _selCardA;
+                            auto cardB = _selCardB;
+                            _selCardB->flipToFront([cardA, cardB](){
+                                cardA->runAction(Sequence::create(Spawn::create(FadeOut::create(0.25), ScaleTo::create(0.25, 0.25), NULL), CallFunc::create([cardA](){
+                                    cardA->removeFromParent();
+                                }), NULL));
+                                cardB->runAction(Sequence::create(Spawn::create(FadeOut::create(0.25), ScaleTo::create(0.25, 0.25), NULL), CallFunc::create([cardB](){
+                                    cardB->removeFromParent();
+                                }), NULL));
+                            });
+                            auto data = cardA->getCardData();
+                            _table[data->row][data->column] = nullptr;
+                            data = cardB->getCardData();
+                            _table[data->row][data->column] = nullptr;
+                            _unfinishedCard = -2;
+                            if (_unfinishedCard == 0) {
+                                
+                            }
                         } else {
-                            _selCardA->flipToBack();
-                            _selCardB->flipToBack();
+                            auto cardA = _selCardA;
+                            auto cardB = _selCardB;
+                            _selCardB->flipToFront([cardA, cardB](){
+                                cardA->flipToBack();
+                                cardB->flipToBack();
+                            });
+                            
                         }
-                        //_selCardA = nullptr;
-                        //_selCardB = nullptr;
+                        _selCardA = nullptr;
+                        _selCardB = nullptr;
                     }
                 }
             }
