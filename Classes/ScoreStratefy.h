@@ -13,11 +13,11 @@
 #include "ScoreStratefyBase.h"
 
 class ScoreStratefy: public ScoreStratefyBase {
-    ScoreStratefy();
     
 private:
     int _continuous;
 public:
+    ScoreStratefy();
     virtual void execute(ScoreData *score, CardData *cardDataA, CardData *cardDataB);
 };
 

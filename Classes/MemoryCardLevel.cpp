@@ -15,17 +15,16 @@ MemoryCardLevel::MemoryCardLevel():
 _unfinishedCard(0),
 _selCardA(nullptr),
 _selCardB(nullptr){
-    
+    this->setCascadeOpacityEnabled(true);
 }
 
 MemoryCardLevel::~MemoryCardLevel() {
     this->removeAllChildren();
-    _eventDispatcher->removeAllEventListeners();
 }
 
 MemoryCardLevel* MemoryCardLevel::create(LevelData data) {
     MemoryCardLevel *pRet = new(std::nothrow) MemoryCardLevel();
-    if (pRet && pRet->init(data))
+    if (pRet && pRet->initWthData(data))
     {
         pRet->autorelease();
         return pRet;
@@ -38,7 +37,7 @@ MemoryCardLevel* MemoryCardLevel::create(LevelData data) {
     }
 }
 
-bool MemoryCardLevel::init(LevelData data) {
+bool MemoryCardLevel::initWthData(LevelData data) {
     if (!Layer::init()) {
         return false;
     }
@@ -77,7 +76,7 @@ void MemoryCardLevel::initCardLayout() {
         cardSize = card->getContentSize().width;
         card->setPosition(Vec2(i%2*cardSize + cardSize/2, i/2*cardSize + cardSize/2));
         this->addChild(card);
-        _table[i/2][i%2] = card;
+        _table[i/_levelData.columns][i%_levelData.columns] = card;
     }
     //Card *card = dynamic_cast<Card*>(CardFactory::createCard(backId, number));
     //this->addChild(card);
@@ -98,6 +97,7 @@ void MemoryCardLevel::initEventTouch() {
     };
     listener->onTouchEnded = [&](Touch *touch, Event *event) {
         auto point = this->convertToNodeSpace(touch->getLocation());
+        Card *selCard = nullptr;
         for (int i = 0; i < _levelData.rows; ++i) {
             auto rows = _table[i];
             for (int j = 0; j < _levelData.columns; ++j) {
@@ -109,50 +109,60 @@ void MemoryCardLevel::initEventTouch() {
                 auto size = card->getContentSize();
                 auto rect = Rect(pos.x - size.width/2, pos.y - size.height/2, size.width, size.height);
                 if (rect.containsPoint(point)) {
-                    if (_selCardA == nullptr) {
-                        //第一次选择
-                        //log("%d -- %d",card->getCardData()->row, card->getCardData()->column);
-                        
-                        card->flipToFront();
-                        _selCardA = card;
-                        break;
-                    } else {
-                        //第二次选择
-                        _selCardB = card;
-                        if (card->getCardData()->number == _selCardA->getCardData()->number) {
-                            auto cardA = _selCardA;
-                            auto cardB = _selCardB;
-                            _selCardB->flipToFront([cardA, cardB](){
-                                cardA->runAction(Sequence::create(Spawn::create(FadeOut::create(0.25), ScaleTo::create(0.25, 0.25), NULL), CallFunc::create([cardA](){
-                                    cardA->removeFromParent();
-                                }), NULL));
-                                cardB->runAction(Sequence::create(Spawn::create(FadeOut::create(0.25), ScaleTo::create(0.25, 0.25), NULL), CallFunc::create([cardB](){
-                                    cardB->removeFromParent();
-                                }), NULL));
-                            });
-                            auto data = cardA->getCardData();
-                            _table[data->row][data->column] = nullptr;
-                            data = cardB->getCardData();
-                            _table[data->row][data->column] = nullptr;
-                            _unfinishedCard = -2;
-                            if (_unfinishedCard == 0) {
-                                
-                            }
-                        } else {
-                            auto cardA = _selCardA;
-                            auto cardB = _selCardB;
-                            _selCardB->flipToFront([cardA, cardB](){
-                                cardA->flipToBack();
-                                cardB->flipToBack();
-                            });
-                            
-                        }
-                        _selCardA = nullptr;
-                        _selCardB = nullptr;
-                    }
+                    selCard = card;
+                    break;
                 }
             }
         }
+        if (_selCardA == nullptr) {
+            //第一次选择
+            //log("%d -- %d",card->getCardData()->row, card->getCardData()->column);
+            selCard->flipToFront();
+            _selCardA = selCard;
+        } else {
+            //第二次选择
+            _selCardB = selCard;
+            if (selCard->getCardData()->number == _selCardA->getCardData()->number) {
+                auto cardA = _selCardA;
+                auto cardB = _selCardB;
+                _selCardB->flipToFront([cardA, cardB](){
+                    cardA->runAction(Sequence::create(Spawn::create(FadeOut::create(0.25), ScaleTo::create(0.25, 0.25), NULL), CallFunc::create([cardA](){
+                        cardA->removeFromParent();
+                    }), NULL));
+                    cardB->runAction(Sequence::create(Spawn::create(FadeOut::create(0.25), ScaleTo::create(0.25, 0.25), NULL), CallFunc::create([cardB](){
+                        cardB->removeFromParent();
+                    }), NULL));
+                });
+                auto data = cardA->getCardData();
+                _table[data->row][data->column] = nullptr;
+                data = cardB->getCardData();
+                _table[data->row][data->column] = nullptr;
+                _unfinishedCard -= 2;
+                _pairCardCallback(_selCardA->getCardData(), _selCardB->getCardData());
+                if (_unfinishedCard == 0) {
+                    _completeCallback();
+                }
+            } else {
+                auto cardA = _selCardA;
+                auto cardB = _selCardB;
+                _selCardB->flipToFront([cardA, cardB](){
+                    cardA->flipToBack();
+                    cardB->flipToBack();
+                });
+                _pairCardCallback(_selCardA->getCardData(), _selCardB->getCardData());
+            }
+            _selCardA = nullptr;
+            _selCardB = nullptr;
+        }
     };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
+}
+
+void MemoryCardLevel::registerCallFunc(std::function<void (CardData *cardA, CardData *cardB)> pairCardCallback, std::function<void ()> completeCallback){
+    _pairCardCallback = pairCardCallback;
+    _completeCallback = completeCallback;
+}
+
+void MemoryCardLevel::setScoreStratefy(std::shared_ptr<ScoreStratefyBase> scroeStratefy){
+    _scroeStratefy = scroeStratefy;
 }

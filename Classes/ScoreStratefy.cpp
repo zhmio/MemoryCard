@@ -24,10 +24,12 @@ void ScoreStratefy::execute(ScoreData *score, CardData *cardDataA, CardData *car
         if (cardDataA->flipCount == 0 && cardDataB->flipCount == 0) {
             
         } else {
+            _continuous = 0;
             score->maxCount = 0;
             score->energy -= 100;
         }
         cardDataA->flipCount++;
         cardDataB->flipCount++;
     }
+    CCLOG("score %d maxcount %d energy %d", score->score, score->maxCount, score->energy);
 }
